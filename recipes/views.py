@@ -1,18 +1,42 @@
-from django.core import serializers
-from django.db.models import Q, Sum
+from django.db import connection
+from django.db.models import Q, Index, Count
+from django.db.models.functions import Lower
 from django.http import HttpResponse
-from django.shortcuts import render
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet, ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from ingredients.models import Ingredient
-from ingredients.serializers import IngredientsSerializer
-from recipes.models import RecipeIngredients, Recipe
-from recipes.serializers import IngredientsRecipeSerializer, RecipeSerializer
+from recipes.models import Recipe, Ingredient
+from recipes.serializers import RecipeSerializer, IngredientsSerializer
 
 
-class Recipes(ModelViewSet):
+class RecipesSearcher(ViewSet):
+    def list(self, request: Request, *args, **kwargs):
+        products_ids = request.query_params.get("products")
+
+        if not products_ids:
+            response = RecipeSerializer(Recipe.objects.all(), many=True)
+            return Response(response.data)
+
+        query = """select r.*, count(i.product_id) from recipes_recipe r 
+        left join recipes_ingredient as i on i.recipe_id = r.id
+        where i.product_id in (%s)
+        group by r.id, r.title
+        order by count(i.product_id) desc"""
+
+        recipe = Recipe.objects.raw(query % products_ids)
+
+        count_products = len(products_ids.split(","))
+        exact = [i for i in recipe if i.count == count_products]
+        additional = [i for i in recipe if i.count != count_products]
+
+        response_exact = RecipeSerializer(exact, many=True)
+        response_additional = RecipeSerializer(additional, many=True)
+
+        return Response({"response": {"exact": response_exact.data, "additional": response_additional.data}})
+
+
+class RecipesViewSet(ModelViewSet):
     def list(self, request, *args, **kwargs) -> HttpResponse:
         recipes = Recipe.objects.all()
         for i in recipes:
@@ -38,9 +62,9 @@ class Recipes(ModelViewSet):
         #     query |= Q(id=i["ingredient"])
         # calories_count = Ingredient.objects.filter(query).aggregate(calories=Sum("calorie"))
 
-        ingredients_id = [i["ingredient"] for i in ingredients]
-        calories_count = Ingredient.objects.filter(id__in=ingredients_id).aggregate(calorie=Sum("calorie"))["calorie"]
-        recipe["calories"] = calories_count
+        # ingredients_id = [i["ingredient"] for i in ingredients]
+        # calories_count = Ingredient.objects.filter(id__in=ingredients_id).aggregate(calorie=Sum("calorie"))["calorie"]
+        # recipe["calories"] = calories_count
 
         recipe = RecipeSerializer(data=recipe)
         recipe.is_valid(raise_exception=True)
@@ -49,7 +73,7 @@ class Recipes(ModelViewSet):
         for i in ingredients:
             i["recipe"] = recipe["id"].value
 
-        serializer = IngredientsRecipeSerializer(data=ingredients, many=True)
+        serializer = IngredientsSerializer(data=ingredients, many=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 

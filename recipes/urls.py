@@ -5,8 +5,6 @@ from recipes import views
 
 # , "post": "create"
 router = SimpleRouter()
-router.register(r'recipes', views.Recipes, basename="recipes")
+router.register(r'recipes', views.RecipesViewSet, basename="recipes")
 urlpatterns = router.urls
-# urlpatterns = [
-#     path("/", views.IngredientsViewSet.as_view({"get": "list"}))
-# ]
+
