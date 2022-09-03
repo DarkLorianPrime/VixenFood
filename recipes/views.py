@@ -20,11 +20,11 @@ class RecipesSearcher(ViewSet):
 
         query = """select r.*, count(i.product_id) from recipes_recipe r 
         left join recipes_ingredient as i on i.recipe_id = r.id
-        where i.product_id in (%s)
+        where i.product_id in %s
         group by r.id, r.title
         order by count(i.product_id) desc"""
 
-        recipe = Recipe.objects.raw(query % products_ids)
+        recipe = Recipe.objects.raw(query, [tuple(products_ids.split(','))])
 
         count_products = len(products_ids.split(","))
         exact = [i for i in recipe if i.count == count_products]
