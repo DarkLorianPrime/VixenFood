@@ -18,29 +18,23 @@ class RecipesSearcher(ViewSet):
             response = RecipeSerializer(Recipe.objects.all(), many=True)
             return Response(response.data)
 
+        ids = tuple(products_ids.split(','))
+
         query = """select r.*, count(i.product_id) from recipes_recipe r 
         left join recipes_ingredient as i on i.recipe_id = r.id
         where i.product_id in %s
         group by r.id, r.title
         order by count(i.product_id) desc"""
 
-        recipe = Recipe.objects.raw(query, [tuple(products_ids.split(','))])
+        recipes = Recipe.objects.raw(query, [ids])
+        serialized = RecipeSerializer(recipes, many=True, context={"count": len(ids)})
 
-        count_products = len(products_ids.split(","))
-        exact = [i for i in recipe if i.count == count_products]
-        additional = [i for i in recipe if i.count != count_products]
-
-        response_exact = RecipeSerializer(exact, many=True)
-        response_additional = RecipeSerializer(additional, many=True)
-
-        return Response({"response": {"exact": response_exact.data, "additional": response_additional.data}})
+        return Response({"response": serialized.data})
 
 
 class RecipesViewSet(ModelViewSet):
     def list(self, request, *args, **kwargs) -> HttpResponse:
         recipes = Recipe.objects.all()
-        for i in recipes:
-            print(i.cooking_time)
         recipes_serialize = RecipeSerializer(recipes, many=True)
         return Response(recipes_serialize.data)
 
@@ -69,9 +63,8 @@ class RecipesViewSet(ModelViewSet):
         recipe = RecipeSerializer(data=recipe)
         recipe.is_valid(raise_exception=True)
         recipe.save()
-
         for i in ingredients:
-            i["recipe"] = recipe["id"].value
+            i["recipe"] = recipe.instance.id
 
         serializer = IngredientsSerializer(data=ingredients, many=True)
         serializer.is_valid(raise_exception=True)
