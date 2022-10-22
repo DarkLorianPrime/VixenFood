@@ -1,13 +1,10 @@
-from django.db import connection
-from django.db.models import Q, Index, Count
-from django.db.models.functions import Lower
 from django.http import HttpResponse
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
 from recipes.models import Recipe, Ingredient
-from recipes.serializers import RecipeSerializer, IngredientsSerializer
+from recipes.serializers import RecipeSearchSerializer, IngredientsSerializer, StagesSerializer, RecipeSerializer
 
 
 class RecipesSearcher(ViewSet):
@@ -15,7 +12,7 @@ class RecipesSearcher(ViewSet):
         products_ids = request.query_params.get("products")
 
         if not products_ids:
-            response = RecipeSerializer(Recipe.objects.all(), many=True)
+            response = RecipeSearchSerializer(Recipe.objects.all(), many=True)
             return Response(response.data)
 
         ids = tuple(products_ids.split(','))
@@ -27,16 +24,25 @@ class RecipesSearcher(ViewSet):
         order by count(i.product_id) desc"""
 
         recipes = Recipe.objects.raw(query, [ids])
-        serialized = RecipeSerializer(recipes, many=True, context={"count": len(ids)})
+        serialized = RecipeSearchSerializer(recipes, many=True, context={"count": len(ids)})
 
         return Response({"response": serialized.data})
 
 
 class RecipesViewSet(ModelViewSet):
+    def get_queryset(self):
+        return Recipe.objects.all()
+    
     def list(self, request, *args, **kwargs) -> HttpResponse:
-        recipes = Recipe.objects.all()
-        recipes_serialize = RecipeSerializer(recipes, many=True)
+        recipes_serialize = RecipeSerializer(self.get_queryset(), many=True)
         return Response(recipes_serialize.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        recipe_serializer = RecipeSerializer(instance)
+        ingredients = Ingredient.objects.filter(product__id=instance.id).all()
+        ingredient_serializer = IngredientsSerializer(ingredients, many=True)
+        return Response([recipe_serializer.data, ingredient_serializer.data])
 
     def update(self, request, *args, **kwargs) -> HttpResponse:
         pass
@@ -63,6 +69,7 @@ class RecipesViewSet(ModelViewSet):
         recipe = RecipeSerializer(data=recipe)
         recipe.is_valid(raise_exception=True)
         recipe.save()
+
         for i in ingredients:
             i["recipe"] = recipe.instance.id
 
@@ -71,3 +78,7 @@ class RecipesViewSet(ModelViewSet):
         serializer.save()
 
         return Response({"response": [recipe.data, serializer.data]}, status=201)
+
+
+class StagesViewSet(ModelViewSet):
+    serializer_class = StagesSerializer

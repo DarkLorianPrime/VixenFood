@@ -19,5 +19,12 @@ class Ingredient(models.Model):
     product = models.ForeignKey("products.Product", on_delete=models.CASCADE)
     recipe = models.ForeignKey("Recipe", on_delete=models.CASCADE, null=True)
     required = models.BooleanField(default=False)
-    grams = models.IntegerField()
-    count = models.IntegerField()
+    grams = models.IntegerField(default=0)
+    count = models.IntegerField(default=0)
+
+
+class CookingStep(models.Model):
+    name = models.CharField(max_length=120)
+    text = models.TextField()
+    step = models.IntegerField(default=0)
+    recipe = models.ForeignKey(to=Recipe, on_delete=models.CASCADE)
