@@ -1,0 +1,28 @@
+x-postgres-environment: &x-postgres-environment
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_NAME: ${POSTGRES_NAME}
+  POSTGRES_HOST: ${POSTGRES_HOST}
+
+services:
+  database:
+    image: postgres:latest
+    restart: always
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      <<: *x-postgres-environment
+
+  backend:
+    build: backend
+    volumes:
+      - "./backend/app/:/application"
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *x-postgres-environment
+      SECURITY_KEY: ${SECURITY_KEY}
+
+
+volumes:
+  pgdata:
