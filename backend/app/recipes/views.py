@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
@@ -17,11 +17,16 @@ class RecipesSearcher(ViewSet):
 
         ids = tuple(products_ids.split(','))
 
-        query = """select r.*, count(i.product_id) from recipes_recipe r 
-        left join recipes_ingredient as i on i.recipe_id = r.id
-        where i.product_id in %s
-        group by r.id, r.title
-        order by count(i.product_id) desc"""
+        query = """
+SELECT r.*,
+       count(i.product_id)
+FROM recipes_recipe r
+LEFT JOIN recipes_ingredient AS i ON i.recipe_id = r.id
+WHERE i.product_id in %s
+GROUP BY r.id,
+         r.title
+ORDER BY count(i.product_id) DESC
+        """
 
         recipes = Recipe.objects.raw(query, [ids])
         serialized = RecipeSearchSerializer(recipes, many=True, context={"count": len(ids)})
@@ -30,12 +35,8 @@ class RecipesSearcher(ViewSet):
 
 
 class RecipesViewSet(ModelViewSet):
-    def get_queryset(self):
-        return Recipe.objects.all()
-    
-    def list(self, request, *args, **kwargs) -> HttpResponse:
-        recipes_serialize = RecipeSerializer(self.get_queryset(), many=True)
-        return Response(recipes_serialize.data)
+    queryset = Recipe.objects.all()
+    serializer_class = RecipeSerializer
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -44,18 +45,13 @@ class RecipesViewSet(ModelViewSet):
         ingredient_serializer = IngredientsSerializer(ingredients, many=True)
         return Response([recipe_serializer.data, ingredient_serializer.data])
 
-    def update(self, request, *args, **kwargs) -> HttpResponse:
+    def update(self, request, *args, **kwargs) -> Response:
         pass
 
-    def create(self, request: Request, *args, **kwargs) -> HttpResponse:  # ingredients, weights, required
-        ingredients = request.data.get("ingredients")
-        recipe = request.data.get("recipe")
-
-        if not ingredients:
-            return Response(data="In JSON need dict field \"ingredients\"", status=400)
-
-        if not recipe:
-            return Response(data="In JSON need dict field \"recipe\"", status=400)
+    def create(self, request: Request, *args, **kwargs) -> Response:  # ingredients, recipe, stages
+        ingredients = request.data.get("ingredients", [])
+        stages = request.data.get("stages")
+        recipe = request.data.get("recipe", {})
 
         # query = Q()
         # for i in ingredients:
@@ -66,18 +62,22 @@ class RecipesViewSet(ModelViewSet):
         # calories_count = Ingredient.objects.filter(id__in=ingredients_id).aggregate(calorie=Sum("calorie"))["calorie"]
         # recipe["calories"] = calories_count
 
-        recipe = RecipeSerializer(data=recipe)
-        recipe.is_valid(raise_exception=True)
-        recipe.save()
+        new_recipe = RecipeSerializer(data=recipe)
 
-        for i in ingredients:
-            i["recipe"] = recipe.instance.id
+        if not new_recipe.is_valid():
+            raise ValidationError({"recipe": new_recipe.errors})
 
-        serializer = IngredientsSerializer(data=ingredients, many=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        new_recipe.save()
+        recipe_instance = new_recipe.instance
 
-        return Response({"response": [recipe.data, serializer.data]}, status=201)
+        new_ingredients = IngredientsSerializer(data=ingredients, many=True, context={"recipe": recipe_instance})
+        new_ingredients.is_valid(raise_exception=True)
+        new_ingredients.save()
+
+        return Response({
+            "recipe": new_recipe.data,
+            "ingredients": new_ingredients.data
+        }, status=201)
 
 
 class StagesViewSet(ModelViewSet):

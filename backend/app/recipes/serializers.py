@@ -1,16 +1,26 @@
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import SerializerMethodField
+from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
 
 from recipes.models import Recipe, Ingredient, CookingStep
 
 
 class IngredientsSerializer(ModelSerializer):
-    def create(self, validated_data: dict):
-        if validated_data.get("count") is None and validated_data.get("grams") is None:
-            raise ValidationError({"count": ["One of this parameters will be not null"],
-                                   "grams": ["One of this parameters will be not null"]})
-        return Ingredient.objects.create(**validated_data)
+    recipe = PrimaryKeyRelatedField(default=None, queryset=Recipe.objects.all())
+
+    def validate(self, attrs):
+        ingredient_count = attrs.get("count")
+        ingredient_grams = attrs.get("grams")
+
+        if ingredient_count or ingredient_grams:
+            return attrs
+
+        raise ValidationError({"count": ["One of  this parameters will be not null"],
+                               "grams": ["One of  this parameters will be not null"]})
+
+    def validate_recipe(self, _):
+        return self.context["recipe"]
 
     class Meta:
         model = Ingredient
@@ -31,13 +41,9 @@ class IngredientsSerializer(ModelSerializer):
 #         fields = ("title", "difficulty", "cooking_time", "complete_match")
 
 class RecipeSerializer(ModelSerializer):
-
-    def create(self, validated_data: dict):
-        return Recipe.objects.create(**validated_data)
-
     class Meta:
         model = Recipe
-        fields = ("title", "difficulty", "cooking_time")
+        fields = ("id", "title", "difficulty", "cooking_time")
 
 
 class RecipeSearchSerializer(RecipeSerializer):
@@ -52,12 +58,11 @@ class RecipeSearchSerializer(RecipeSerializer):
 
 
 class StagesSerializer(ModelSerializer):
-
-    def create(self, validated_data):
-        if CookingStep.objects.filter(recipe_id=validated_data["recipe_id"], step=validated_data["step"]).exists():
+    def validate(self, attrs):
+        if CookingStep.objects.filter(recipe_id=attrs["recipe_id"], step=attrs["step"]).exists():
             raise ValidationError({"step": ["This step for this recipe already exists!"]})
 
-        return CookingStep.objects.create(**validated_data)
+        return attrs
 
     class Meta:
         model = CookingStep
