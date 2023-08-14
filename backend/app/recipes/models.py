@@ -11,7 +11,6 @@ difficulties = (
 class Recipe(models.Model):
     title = models.CharField(max_length=40)
     difficulty = models.CharField(max_length=6, choices=difficulties)
-    # calories = models.IntegerField() Not required yet
     cooking_time = models.IntegerField()
 
 
