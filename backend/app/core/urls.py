@@ -16,9 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("api/v1/", include("recipes.urls")),
-    path("api/v1/", include("products.urls"))
+    path("api/", include([
+        path('v1/', include([
+            path('products/', include("products.urls"), name="products"),
+            path('recipes/', include("recipes.urls"), name="recipes")
+        ]), name="version")
+    ]), name="global-vision")
 ]
