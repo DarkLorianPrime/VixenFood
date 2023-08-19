@@ -17,7 +17,7 @@ class Recipe(models.Model):
 
 
 class Ingredient(models.Model):
-    product = models.ForeignKey("apps.products.Product", on_delete=models.CASCADE)
+    product = models.ForeignKey("products.Product", on_delete=models.CASCADE)
     recipe = models.ForeignKey("Recipe", on_delete=models.CASCADE, null=True)
     required = models.BooleanField(default=False)
     grams = models.IntegerField(default=0)
@@ -32,6 +32,7 @@ class CookingStep(models.Model):
 
     def swap_step(self, other_model: Self):
         self.step, other_model.step = other_model.step, self.step
+
         self.save()
         other_model.save()
 
@@ -39,9 +40,9 @@ class CookingStep(models.Model):
         if self.pk:
             return super().save(*args, **kwargs)
 
-        step = CookingStep.objects.filter(recipe_id=self.recipe.id).order_by("-id").first()
-        if step:
-            self.step = step.step + 1
+        model = CookingStep.objects.filter(recipe_id=self.recipe.id).order_by("-id").first()
+        if model:
+            self.step = model.step + 1
 
         return super().save(*args, **kwargs)
 
