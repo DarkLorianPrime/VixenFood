@@ -7,4 +7,4 @@ from apps.products.serializers import ProductsSerializer
 class ProductsViewSet(ModelViewSet):
     serializer_class = ProductsSerializer
     queryset = Product.objects.all()
-
+    search_fields = ("name", )
