@@ -1,9 +1,10 @@
-from rest_framework.exceptions import ValidationError
+from django.db.models import Q
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from recipes.models import Recipe, Ingredient
+from recipes.models import Recipe, Ingredient, CookingStep
 from recipes.serializers import RecipeSearchSerializer, IngredientsSerializer, StagesSerializer, RecipeSerializer
 
 
@@ -43,10 +44,10 @@ class RecipesViewSet(ModelViewSet):
         recipe_serializer = RecipeSerializer(instance)
 
         ingredients = Ingredient.objects.filter(recipe__id=instance.id).all()
-        print(ingredients)
         ingredient_serializer = IngredientsSerializer(ingredients, many=True)
 
-        return Response([recipe_serializer.data, ingredient_serializer.data])
+        return Response({"recipe": recipe_serializer.data,
+                         "ingredients": ingredient_serializer.data})
 
     def update(self, request, *args, **kwargs) -> Response:
         pass
@@ -75,3 +76,22 @@ class RecipesViewSet(ModelViewSet):
 
 class StagesViewSet(ModelViewSet):
     serializer_class = StagesSerializer
+
+    lookup_field = "step"
+
+    def get_serializer_context(self):
+        default_context = super().get_serializer_context()
+        default_context["recipe"] = self.get_recipe(raise_exception=False)
+        return default_context
+
+    def get_recipe(self, *, raise_exception):
+        recipe = Recipe.objects.filter(id=self.kwargs["recipe_id"]).first()
+
+        if raise_exception and not recipe:
+            raise NotFound()
+
+        return recipe
+
+    def get_queryset(self):
+        recipe = self.get_recipe(raise_exception=True)
+        return CookingStep.objects.filter(recipe=recipe).order_by("step")

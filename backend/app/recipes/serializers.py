@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import SerializerMethodField, CharField
 from rest_framework.relations import PrimaryKeyRelatedField
@@ -60,12 +61,23 @@ class RecipeSearchSerializer(RecipeSerializer):
 
 
 class StagesSerializer(ModelSerializer):
-    def validate(self, attrs):
-        if CookingStep.objects.filter(recipe_id=attrs["recipe_id"], step=attrs["step"]).exists():
-            raise ValidationError({"step": ["This step for this recipe already exists!"]})
+    recipe = PrimaryKeyRelatedField(default=None, queryset=Recipe.objects.all(), write_only=True)
 
+    def validate_recipe(self, _):
+        return self.context["recipe"]
+
+    def validate(self, attrs):
         return attrs
+
+    def update(self, instance: CookingStep, validated_data):
+        exists_instance = CookingStep.objects.filter(~Q(id=instance.id),
+                                                     step=validated_data["step"],
+                                                     recipe=instance.recipe).first()
+        if exists_instance:
+            instance.swap_step(exists_instance)
+
+        return super().update(instance, validated_data)
 
     class Meta:
         model = CookingStep
-        fields = "__all__"
+        exclude = ["id"]
