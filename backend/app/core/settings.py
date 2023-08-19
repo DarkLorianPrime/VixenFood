@@ -35,10 +35,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'products',
-    'recipes',
+    'apps.products',
+    'apps.recipes',
     'rest_framework'
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_FILTER_BACKENDS": (
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter"
+    )
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
