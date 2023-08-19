@@ -10,7 +10,8 @@ class ProductsSerializer(ModelSerializer):
         fields = "__all__"
 
     def validate_name(self, name):
-        if Product.objects.filter(name=name).exists():
-            raise ValidationError("this name already exists")
+        if not Product.objects.filter(name=name).exists():
+            return name
 
-        return name
+        raise ValidationError("this name already exists")
+

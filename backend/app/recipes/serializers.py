@@ -1,19 +1,21 @@
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import SerializerMethodField
+from rest_framework.fields import SerializerMethodField, CharField
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
 
+from products.models import Product
 from recipes.models import Recipe, Ingredient, CookingStep
 
 
 class IngredientsSerializer(ModelSerializer):
-    recipe = PrimaryKeyRelatedField(default=None, queryset=Recipe.objects.all())
+    recipe = PrimaryKeyRelatedField(default=None, queryset=Recipe.objects.all(), write_only=True)
+    product = PrimaryKeyRelatedField(queryset=Product.objects.all())
+    product_name = CharField(source="product.name", read_only=True)
 
     def validate(self, attrs):
-        ingredient_count = attrs.get("count")
-        ingredient_grams = attrs.get("grams")
+        ingredient = attrs.get("count") or attrs.get("grams")
 
-        if ingredient_count or ingredient_grams:
+        if ingredient:
             return attrs
 
         raise ValidationError({"count": ["One of  this parameters will be not null"],
