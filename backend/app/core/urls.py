@@ -20,8 +20,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", include([
         path('v1/', include([
-            path('products/', include("products.urls"), name="products"),
-            path('recipes/', include("recipes.urls"), name="recipes")
+            path('products/', include("apps.products.urls"), name="products"),
+            path('recipes/', include("apps.recipes.urls"), name="recipes")
         ]), name="version")
     ]), name="global-vision")
 ]

@@ -1,8 +1,6 @@
-from django.urls import path
 from rest_framework.routers import SimpleRouter
 
-from products import views
-from recipes.views import RecipesSearcher
+from apps.products import views
 
 router = SimpleRouter()
 

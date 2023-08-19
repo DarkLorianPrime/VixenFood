@@ -1,6 +1,6 @@
 from rest_framework.routers import SimpleRouter
 
-from recipes import views
+from apps.recipes import views
 
 router = SimpleRouter()
 router.register(r'', views.RecipesViewSet, basename="recipes")

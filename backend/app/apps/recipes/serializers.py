@@ -4,8 +4,8 @@ from rest_framework.fields import SerializerMethodField, CharField
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
 
-from products.models import Product
-from recipes.models import Recipe, Ingredient, CookingStep
+from apps.products.models import Product
+from apps.recipes.models import Recipe, Ingredient, CookingStep
 
 
 class IngredientsSerializer(ModelSerializer):

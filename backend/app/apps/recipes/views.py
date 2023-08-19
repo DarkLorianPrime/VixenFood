@@ -1,11 +1,10 @@
-from django.db.models import Q
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from recipes.models import Recipe, Ingredient, CookingStep
-from recipes.serializers import RecipeSearchSerializer, IngredientsSerializer, StagesSerializer, RecipeSerializer
+from apps.recipes.models import Recipe, Ingredient, CookingStep
+from apps.recipes.serializers import RecipeSearchSerializer, IngredientsSerializer, StagesSerializer, RecipeSerializer
 
 
 class RecipesSearcher(ViewSet):
@@ -48,9 +47,6 @@ class RecipesViewSet(ModelViewSet):
 
         return Response({"recipe": recipe_serializer.data,
                          "ingredients": ingredient_serializer.data})
-
-    def update(self, request, *args, **kwargs) -> Response:
-        pass
 
     def create(self, request: Request, *args, **kwargs) -> Response:  # ingredients, recipe
         ingredients = request.data.get("ingredients", [])

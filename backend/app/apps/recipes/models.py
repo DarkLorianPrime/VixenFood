@@ -17,7 +17,7 @@ class Recipe(models.Model):
 
 
 class Ingredient(models.Model):
-    product = models.ForeignKey("products.Product", on_delete=models.CASCADE)
+    product = models.ForeignKey("apps.products.Product", on_delete=models.CASCADE)
     recipe = models.ForeignKey("Recipe", on_delete=models.CASCADE, null=True)
     required = models.BooleanField(default=False)
     grams = models.IntegerField(default=0)
