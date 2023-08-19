@@ -7,7 +7,8 @@ from recipes.views import RecipesSearcher
 router = SimpleRouter()
 
 router.register('', views.ProductsViewSet, basename="products")
-urlpatterns = [
-    path("results/", RecipesSearcher.as_view({"get": "list"}))
-
-] + router.urls
+urlpatterns = router.urls
+# [
+#     path("results/", RecipesSearcher.as_view({"get": "list"}))
+#
+# ] +
